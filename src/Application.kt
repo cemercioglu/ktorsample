@@ -1,51 +1,63 @@
+@file:Suppress("RECEIVER_NULLABILITY_MISMATCH_BASED_ON_JAVA_ANNOTATIONS")
+
 package com.cem.ktorsample
 
+import com.cem.ktorsample.data.db.dao.Messages
+import com.cem.ktorsample.data.db.dao.Users
+import com.cem.ktorsample.plugins.configureMonitoring
+import com.cem.ktorsample.plugins.configureRouting
+import com.cem.ktorsample.plugins.configureSerialization
+import com.cem.ktorsample.plugins.configureWebSocket
+import com.google.gson.Gson
 import io.ktor.application.*
-import io.ktor.response.*
-import io.ktor.request.*
-import io.ktor.routing.*
-import io.ktor.http.*
-import io.ktor.websocket.*
-import io.ktor.http.cio.websocket.*
-import java.time.*
-import io.ktor.gson.*
-import io.ktor.features.*
+import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
+import org.jetbrains.exposed.sql.StdOutSqlLogger
+import org.jetbrains.exposed.sql.addLogger
+import org.jetbrains.exposed.sql.transactions.transaction
 
-fun main(args: Array<String>): Unit = io.ktor.server.netty.EngineMain.main(args)
 
-@Suppress("unused") // Referenced in application.conf
-@kotlin.jvm.JvmOverloads
-fun Application.module(testing: Boolean = false) {
-    install(io.ktor.websocket.WebSockets) {
-        pingPeriod = Duration.ofSeconds(15)
-        timeout = Duration.ofSeconds(15)
-        maxFrameSize = Long.MAX_VALUE
-        masking = false
-    }
+fun main(args: Array<String>): Unit =
+    io.ktor.server.netty.EngineMain.main(args)
 
-    install(ContentNegotiation) {
-        gson {
-        }
-    }
+@Suppress("unused") // application.conf references the main function. This annotation prevents the IDE from marking it as unused.
+fun Application.module() {
+    configureSerialization()
+    configureRouting()
+    configureWebSocket()
+    configureMonitoring()
 
-    routing {
-        get("/") {
-            call.respondText("HELLO WORLD!", contentType = ContentType.Text.Plain)
-        }
+//    install(Compression)
+//    install(CORS) {
+//        anyHost()
+//    }
+//    install(DefaultHeaders)
+//    install(CallLogging)
 
-        webSocket("/myws/echo") {
-            send(Frame.Text("Hi from server"))
-            while (true) {
-                val frame = incoming.receive()
-                if (frame is Frame.Text) {
-                    send(Frame.Text("Client said: " + frame.readText()))
-                }
-            }
-        }
+    initDB()
+}
 
-        get("/json/gson") {
-            call.respond(mapOf("hello" to "world"))
-        }
+
+fun initDB() {
+    val file = Application::class.java.getResource("/database.json").readText()
+    val properties = Gson().fromJson(file.toString(), Properties::class.java)
+    Database.connect(
+        url = properties.url,
+        driver = properties.driver,
+        user = properties.userName,
+        password = properties.pass,
+    )
+    transaction {
+        addLogger(StdOutSqlLogger)
+        SchemaUtils.create(Users, Messages)
     }
 }
 
+data class Properties(
+    var driver: String,
+    var url: String,
+    var userName: String,
+    var pass: String,
+
+
+    )

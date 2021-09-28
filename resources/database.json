@@ -1,0 +1,7 @@
+{
+  "driver": "org.postgresql.ds.PGSimpleDataSource",
+  "url": "jdbc:postgresql://ec2-54-195-195-81.eu-west-1.compute.amazonaws.com:5432/d2copjl2du96u5?sslmode=require",
+  "userName": "qvpexrjzuetggb",
+  "pass": "bb31d5462cb185bd5db6a0ff2c1a22fbec3fcb67053bba35b47e27f3ebe66f26"
+}
+
